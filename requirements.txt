@@ -1,0 +1,40 @@
+# YNAB API Integration
+requests>=2.31.0
+pynab>=1.0.0
+
+# Database and Data Storage
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+sqlite3  # Built-in, but listed for clarity
+
+# Data Processing and Validation
+pydantic>=2.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Configuration Management
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Logging and Utilities
+structlog>=23.0.0
+click>=8.1.0
+rich>=13.0.0
+
+# Date/Time Handling
+python-dateutil>=2.8.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+
+# Development Tools
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+pre-commit>=3.4.0
+
+# Optional: Web interface (if needed later)
+# fastapi>=0.100.0
+# uvicorn>=0.23.0
