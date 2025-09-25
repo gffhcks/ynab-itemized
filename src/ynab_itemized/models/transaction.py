@@ -1,11 +1,11 @@
 """Transaction-related data models."""
 
-from datetime import date, datetime
+from datetime import date as Date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Dict, List, Optional, Any
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 from .base import BaseModel
 
@@ -34,20 +34,23 @@ class TransactionItem(BaseModel):
     notes: Optional[str] = Field(None, description="Additional notes")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
     
-    @validator('amount', 'unit_price', 'discount_amount', 'tax_amount', pre=True)
+    @field_validator('amount', 'unit_price', 'discount_amount', 'tax_amount', mode='before')
+    @classmethod
     def convert_to_decimal(cls, v):
         """Convert numeric values to Decimal."""
         if v is None:
             return v
         return Decimal(str(v))
     
-    @validator('unit_price', always=True)
-    def calculate_unit_price(cls, v, values):
+    @field_validator('unit_price', mode='after')
+    @classmethod
+    def calculate_unit_price(cls, v, info):
         """Calculate unit price if not provided."""
-        if v is None and 'amount' in values and 'quantity' in values:
-            quantity = values['quantity'] or 1
-            if quantity > 0:
-                return values['amount'] / Decimal(str(quantity))
+        if v is None and info.data:
+            amount = info.data.get('amount')
+            quantity = info.data.get('quantity', 1) or 1
+            if amount is not None and quantity > 0:
+                return amount / Decimal(str(quantity))
         return v
 
 
@@ -60,13 +63,14 @@ class YNABTransaction(BaseModel):
     payee_name: Optional[str] = Field(None, description="Payee name")
     memo: Optional[str] = Field(None, description="Transaction memo")
     amount: Decimal = Field(..., description="Transaction amount in milliunits")
-    date: date = Field(..., description="Transaction date")
+    date: Date = Field(..., description="Transaction date")
     cleared: TransactionStatus = Field(default=TransactionStatus.UNCLEARED)
     approved: bool = Field(default=True)
     flag_color: Optional[str] = Field(None, description="Flag color")
     import_id: Optional[str] = Field(None, description="Import ID")
     
-    @validator('amount', pre=True)
+    @field_validator('amount', mode='before')
+    @classmethod
     def convert_amount_to_decimal(cls, v):
         """Convert amount to Decimal."""
         return Decimal(str(v))
@@ -99,7 +103,8 @@ class ItemizedTransaction(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Custom tags")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     
-    @validator('subtotal', 'total_tax', 'total_discount', 'tip_amount', pre=True)
+    @field_validator('subtotal', 'total_tax', 'total_discount', 'tip_amount', mode='before')
+    @classmethod
     def convert_to_decimal(cls, v):
         """Convert numeric values to Decimal."""
         if v is None:

@@ -16,35 +16,90 @@ A Python application for managing itemized transaction data with YNAB (You Need 
 
 ## Installation
 
+### Quick Setup (Ubuntu/Debian)
+
+For Ubuntu/Debian systems, you can use the automated setup:
+
+```bash
+git clone <repository-url>
+cd ynab-itemized
+make setup
+```
+
+This will install all system dependencies and the Python package in one command.
+
+### Manual Installation
+
 1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd ynab-itemized
 ```
 
-2. Create a virtual environment:
+2. Install system dependencies (Ubuntu/Debian):
+```bash
+make install-deps
+```
+
+Or manually install the required packages:
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-pip python3-dev build-essential git
+```
+
+3. Install the Python package:
+```bash
+make install
+```
+
+### Alternative: Virtual Environment Setup
+
+If you prefer to use a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+Then install dependencies:
 ```bash
-pip install -e .
+pip install -e ".[dev]"  # For development
+# or
+pip install .  # For regular use
 ```
 
-4. Set up configuration:
+## Configuration
+
+After installation, set up your configuration:
 ```bash
 cp .env.example .env
 # Edit .env with your YNAB API token and budget ID
 ```
 
-5. Initialize the database:
+Initialize the database:
 ```bash
 ynab-itemized init-db
 ```
 
-## Configuration
+## Development
+
+### Available Make Targets
+
+The project includes several make targets for common development tasks:
+
+```bash
+make help          # Show all available targets
+make setup         # Complete setup (install system deps + package)
+make install-deps  # Install system dependencies (Ubuntu/Debian)
+make install       # Install package
+make install-dev   # Install package with development dependencies
+make build         # Build package
+make test          # Run tests
+make test-cov      # Run tests with coverage report
+make lint          # Run linting (flake8, mypy)
+make format        # Format code with black
+make clean         # Clean build artifacts
+```
 
 ### YNAB API Setup
 

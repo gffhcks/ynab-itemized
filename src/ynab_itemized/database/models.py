@@ -69,7 +69,7 @@ class ItemizedTransactionDB(Base):
     receipt_image_path = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
     tags = Column(JSON, nullable=True)  # Store as JSON array
-    metadata = Column(JSON, nullable=True)  # Store as JSON object
+    extra_metadata = Column(JSON, nullable=True)  # Store as JSON object
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
@@ -99,7 +99,7 @@ class TransactionItemDB(Base):
     discount_amount = Column(Numeric(precision=10, scale=2), default=0)
     tax_amount = Column(Numeric(precision=10, scale=2), default=0)
     notes = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    extra_metadata = Column(JSON, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)

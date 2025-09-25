@@ -1,8 +1,10 @@
-.PHONY: help install install-dev test test-cov lint format clean build docs
+.PHONY: help install install-dev install-deps setup test test-cov lint format clean build docs
 
 # Default target
 help:
 	@echo "Available targets:"
+	@echo "  setup        Complete setup (install system deps + package)"
+	@echo "  install-deps Install system dependencies (Ubuntu/Debian)"
 	@echo "  install      Install package in development mode"
 	@echo "  install-dev  Install package with development dependencies"
 	@echo "  test         Run tests"
@@ -15,12 +17,29 @@ help:
 	@echo "  init-db      Initialize database"
 	@echo "  migration    Create new database migration"
 
+# System Dependencies
+# Install required system packages for Ubuntu/Debian systems
+# This includes python3-venv which is needed for isolated build environments
+install-deps:
+	@echo "Installing system dependencies for Ubuntu/Debian..."
+	@echo "This will install: python3-venv, python3-pip, python3-dev, build-essential, git"
+	@echo "Note: This requires sudo privileges"
+	sudo apt update
+	sudo apt install -y python3-venv python3-pip python3-dev build-essential git
+	@echo "System dependencies installed successfully!"
+	@echo "You can now run 'make install' to install the Python package."
+
+# Complete Setup
+# One-command setup: install system dependencies and Python package
+setup: install-deps install
+	@echo "Complete setup finished! You can now use 'ynab-itemized --help' to get started."
+
 # Installation
-install:
-	pip install -e .
+install: build
+	pip install dist/ynab_itemized-0.1.0-py3-none-any.whl
 
 install-dev:
-	pip install -e ".[dev]"
+	pip install ".[dev]"
 	pre-commit install
 
 # Testing
