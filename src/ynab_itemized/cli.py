@@ -118,7 +118,9 @@ def add_items(transaction_id: str):
             transaction = ynab_client.get_transaction(transaction_id)
 
         if not transaction:
-            console.print(f"❌ Transaction {transaction_id} not found", style="bold red")
+            console.print(
+                f"❌ Transaction {transaction_id} not found", style="bold red"
+            )
             sys.exit(1)
 
         amount_display = abs(transaction.amount / 1000)
