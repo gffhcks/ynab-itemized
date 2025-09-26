@@ -7,6 +7,6 @@ __all__ = [
     "DatabaseManager",
     "Base",
     "ItemizedTransactionDB",
-    "TransactionItemDB", 
+    "TransactionItemDB",
     "YNABTransactionDB",
 ]

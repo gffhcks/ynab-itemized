@@ -1,13 +1,17 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 from datetime import date
 from decimal import Decimal
 
-from ynab_itemized.models.transaction import (
-    YNABTransaction, TransactionItem, ItemizedTransaction, TransactionStatus
-)
+import pytest
+
 from ynab_itemized.database.manager import DatabaseManager
+from ynab_itemized.models.transaction import (
+    ItemizedTransaction,
+    TransactionItem,
+    TransactionStatus,
+    YNABTransaction,
+)
 
 
 @pytest.fixture
@@ -22,7 +26,7 @@ def sample_ynab_transaction():
         amount=Decimal("25000"),  # $25.00 in milliunits
         date=date(2023, 12, 1),
         cleared=TransactionStatus.CLEARED,
-        approved=True
+        approved=True,
     )
 
 
@@ -35,16 +39,16 @@ def sample_transaction_items():
             amount=Decimal("10.99"),
             quantity=1,
             category="Groceries",
-            tax_amount=Decimal("0.88")
+            tax_amount=Decimal("0.88"),
         ),
         TransactionItem(
-            name="Item 2", 
+            name="Item 2",
             amount=Decimal("12.50"),
             quantity=2,
             unit_price=Decimal("6.25"),
             category="Groceries",
-            tax_amount=Decimal("1.00")
-        )
+            tax_amount=Decimal("1.00"),
+        ),
     ]
 
 
@@ -59,7 +63,7 @@ def sample_itemized_transaction(sample_ynab_transaction, sample_transaction_item
         total_discount=Decimal("0.00"),
         tip_amount=Decimal("0.00"),
         store_name="Test Store",
-        store_location="123 Test St"
+        store_location="123 Test St",
     )
 
 

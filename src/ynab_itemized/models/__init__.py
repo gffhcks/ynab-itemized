@@ -1,11 +1,11 @@
 """Data models for YNAB Itemized."""
 
-from .transaction import ItemizedTransaction, TransactionItem, YNABTransaction
 from .base import BaseModel
+from .transaction import ItemizedTransaction, TransactionItem, YNABTransaction
 
 __all__ = [
     "BaseModel",
     "ItemizedTransaction",
-    "TransactionItem", 
+    "TransactionItem",
     "YNABTransaction",
 ]

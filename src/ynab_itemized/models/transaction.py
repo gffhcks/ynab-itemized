@@ -1,17 +1,18 @@
 """Transaction-related data models."""
 
-from datetime import date as Date, datetime
+from datetime import date as Date
 from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from .base import BaseModel
 
 
 class TransactionStatus(str, Enum):
     """Transaction status enumeration."""
+
     CLEARED = "cleared"
     UNCLEARED = "uncleared"
     RECONCILED = "reconciled"
@@ -19,7 +20,7 @@ class TransactionStatus(str, Enum):
 
 class TransactionItem(BaseModel):
     """Individual item within a transaction."""
-    
+
     name: str = Field(..., description="Item name or description")
     amount: Decimal = Field(..., description="Item amount in account currency")
     quantity: Optional[int] = Field(default=1, description="Quantity of items")
@@ -29,34 +30,41 @@ class TransactionItem(BaseModel):
     brand: Optional[str] = Field(None, description="Brand name")
     sku: Optional[str] = Field(None, description="Stock keeping unit")
     barcode: Optional[str] = Field(None, description="Product barcode")
-    discount_amount: Optional[Decimal] = Field(default=Decimal("0"), description="Discount applied to this item")
-    tax_amount: Optional[Decimal] = Field(default=Decimal("0"), description="Tax amount for this item")
+    discount_amount: Optional[Decimal] = Field(
+        default=Decimal("0"), description="Discount applied to this item"
+    )
+    tax_amount: Optional[Decimal] = Field(
+        default=Decimal("0"), description="Tax amount for this item"
+    )
     notes: Optional[str] = Field(None, description="Additional notes")
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
-    
-    @field_validator('amount', 'unit_price', 'discount_amount', 'tax_amount', mode='before')
+    metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
+
+    @field_validator(
+        "amount", "unit_price", "discount_amount", "tax_amount", mode="before"
+    )
     @classmethod
     def convert_to_decimal(cls, v):
         """Convert numeric values to Decimal."""
         if v is None:
             return v
         return Decimal(str(v))
-    
-    @field_validator('unit_price', mode='after')
-    @classmethod
-    def calculate_unit_price(cls, v, info):
+
+    @model_validator(mode="after")
+    def calculate_unit_price(self):
         """Calculate unit price if not provided."""
-        if v is None and info.data:
-            amount = info.data.get('amount')
-            quantity = info.data.get('quantity', 1) or 1
+        if self.unit_price is None:
+            amount = self.amount
+            quantity = self.quantity or 1
             if amount is not None and quantity > 0:
-                return amount / Decimal(str(quantity))
-        return v
+                self.unit_price = amount / Decimal(str(quantity))
+        return self
 
 
 class YNABTransaction(BaseModel):
     """YNAB transaction data."""
-    
+
     ynab_id: str = Field(..., description="YNAB transaction ID")
     account_id: str = Field(..., description="YNAB account ID")
     category_id: Optional[str] = Field(None, description="YNAB category ID")
@@ -68,8 +76,8 @@ class YNABTransaction(BaseModel):
     approved: bool = Field(default=True)
     flag_color: Optional[str] = Field(None, description="Flag color")
     import_id: Optional[str] = Field(None, description="Import ID")
-    
-    @field_validator('amount', mode='before')
+
+    @field_validator("amount", mode="before")
     @classmethod
     def convert_amount_to_decimal(cls, v):
         """Convert amount to Decimal."""
@@ -78,22 +86,28 @@ class YNABTransaction(BaseModel):
 
 class ItemizedTransaction(BaseModel):
     """Complete itemized transaction with YNAB data and item details."""
-    
+
     ynab_transaction: YNABTransaction = Field(..., description="YNAB transaction data")
-    items: List[TransactionItem] = Field(default_factory=list, description="Itemized breakdown")
-    
+    items: List[TransactionItem] = Field(
+        default_factory=list, description="Itemized breakdown"
+    )
+
     # Summary fields
-    subtotal: Optional[Decimal] = Field(None, description="Subtotal before tax and discounts")
+    subtotal: Optional[Decimal] = Field(
+        None, description="Subtotal before tax and discounts"
+    )
     total_tax: Optional[Decimal] = Field(None, description="Total tax amount")
     total_discount: Optional[Decimal] = Field(None, description="Total discount amount")
-    tip_amount: Optional[Decimal] = Field(default=Decimal("0"), description="Tip amount")
-    
+    tip_amount: Optional[Decimal] = Field(
+        default=Decimal("0"), description="Tip amount"
+    )
+
     # Store/merchant information
     store_name: Optional[str] = Field(None, description="Store or merchant name")
     store_location: Optional[str] = Field(None, description="Store location")
     store_phone: Optional[str] = Field(None, description="Store phone number")
     receipt_number: Optional[str] = Field(None, description="Receipt number")
-    
+
     # Additional metadata
     payment_method: Optional[str] = Field(None, description="Payment method used")
     cashier: Optional[str] = Field(None, description="Cashier name")
@@ -101,44 +115,52 @@ class ItemizedTransaction(BaseModel):
     receipt_image_path: Optional[str] = Field(None, description="Path to receipt image")
     notes: Optional[str] = Field(None, description="Additional notes")
     tags: List[str] = Field(default_factory=list, description="Custom tags")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-    
-    @field_validator('subtotal', 'total_tax', 'total_discount', 'tip_amount', mode='before')
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
+
+    @field_validator(
+        "subtotal", "total_tax", "total_discount", "tip_amount", mode="before"
+    )
     @classmethod
     def convert_to_decimal(cls, v):
         """Convert numeric values to Decimal."""
         if v is None:
             return v
         return Decimal(str(v))
-    
+
     @property
     def calculated_subtotal(self) -> Decimal:
         """Calculate subtotal from items."""
-        return sum(item.amount for item in self.items)
-    
+        return sum(item.amount for item in self.items) or Decimal("0")
+
     @property
     def calculated_tax(self) -> Decimal:
         """Calculate total tax from items."""
-        return sum(item.tax_amount or Decimal("0") for item in self.items)
-    
+        tax_amounts = (item.tax_amount or Decimal("0") for item in self.items)
+        return sum(tax_amounts) or Decimal("0")
+
     @property
     def calculated_discount(self) -> Decimal:
         """Calculate total discount from items."""
-        return sum(item.discount_amount or Decimal("0") for item in self.items)
-    
+        discount_amounts = (item.discount_amount or Decimal("0") for item in self.items)
+        return sum(discount_amounts) or Decimal("0")
+
     @property
     def calculated_total(self) -> Decimal:
         """Calculate total amount."""
-        return (self.calculated_subtotal + 
-                self.calculated_tax - 
-                self.calculated_discount + 
-                (self.tip_amount or Decimal("0")))
-    
+        return (
+            self.calculated_subtotal
+            + self.calculated_tax
+            - self.calculated_discount
+            + (self.tip_amount or Decimal("0"))
+        )
+
     def validate_totals(self) -> bool:
         """Validate that calculated totals match YNAB transaction amount."""
         # Convert YNAB milliunits to regular units
         ynab_amount = abs(self.ynab_transaction.amount / 1000)
         calculated_total = self.calculated_total
-        
+
         # Allow for small rounding differences
         return abs(ynab_amount - calculated_total) < Decimal("0.01")

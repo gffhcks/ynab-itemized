@@ -38,7 +38,7 @@ setup: install-deps install
 install: build
 	pip install dist/ynab_itemized-0.1.0-py3-none-any.whl
 
-install-dev:
+install-dev: install
 	pip install ".[dev]"
 	pre-commit install
 
@@ -47,7 +47,7 @@ test:
 	pytest
 
 test-cov:
-	pytest --cov=src/ynab_itemized --cov-report=html --cov-report=term
+	pytest --cov=src/ynab_itemized --cov-report=term-missing --cov-report=html
 
 # Code quality
 lint:

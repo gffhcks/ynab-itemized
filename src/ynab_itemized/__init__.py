@@ -7,13 +7,13 @@ __version__ = "0.1.0"
 __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
-from .ynab.client import YNABClient
-from .models.transaction import ItemizedTransaction, TransactionItem
 from .database.manager import DatabaseManager
+from .models.transaction import ItemizedTransaction, TransactionItem
+from .ynab.client import YNABClient
 
 __all__ = [
     "YNABClient",
-    "ItemizedTransaction", 
+    "ItemizedTransaction",
     "TransactionItem",
     "DatabaseManager",
 ]

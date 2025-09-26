@@ -6,6 +6,6 @@ from .exceptions import YNABAPIError, YNABAuthError, YNABRateLimitError
 __all__ = [
     "YNABClient",
     "YNABAPIError",
-    "YNABAuthError", 
+    "YNABAuthError",
     "YNABRateLimitError",
 ]
