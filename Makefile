@@ -47,7 +47,7 @@ test:
 	pytest
 
 test-cov:
-	pytest --cov=src/ynab_itemized --cov-report=term-missing --cov-report=html
+	pytest --cov --cov-report=term-missing --cov-report=html
 
 # Code quality
 lint:
