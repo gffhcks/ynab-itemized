@@ -30,7 +30,7 @@ class TestDatabaseManager:
         test_db.save_itemized_transaction(sample_itemized_transaction)
 
         # Retrieve
-        retrieved = test_db.get_itemized_transaction(
+        retrieved = test_db.get_itemized_transaction_by_ynab_id(
             sample_itemized_transaction.ynab_transaction.ynab_id
         )
 
@@ -49,14 +49,14 @@ class TestDatabaseManager:
         test_db.save_itemized_transaction(sample_itemized_transaction)
 
         # Delete
-        deleted = test_db.delete_itemized_transaction(
+        deleted = test_db.delete_itemized_transaction_by_ynab_id(
             sample_itemized_transaction.ynab_transaction.ynab_id
         )
 
         assert deleted is True
 
         # Verify it's gone
-        retrieved = test_db.get_itemized_transaction(
+        retrieved = test_db.get_itemized_transaction_by_ynab_id(
             sample_itemized_transaction.ynab_transaction.ynab_id
         )
         assert retrieved is None

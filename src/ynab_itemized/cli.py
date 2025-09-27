@@ -177,13 +177,23 @@ def list_transactions(limit: int):
 
         for transaction in transactions[:limit]:
             ynab_tx = transaction.ynab_transaction
-            table.add_row(
-                str(ynab_tx.date),
-                ynab_tx.payee_name or "Unknown",
-                f"${abs(ynab_tx.amount/1000):.2f}",
-                str(len(transaction.items)),
-                transaction.store_name or "",
-            )
+            if ynab_tx:
+                table.add_row(
+                    str(ynab_tx.date),
+                    ynab_tx.payee_name or "Unknown",
+                    f"${abs(ynab_tx.amount/1000):.2f}",
+                    str(len(transaction.items)),
+                    transaction.store_name or "",
+                )
+            else:
+                # Handle standalone itemized transactions
+                table.add_row(
+                    str(transaction.transaction_date or "Unknown"),
+                    transaction.merchant_name or "Unknown",
+                    f"${transaction.total_amount or 0:.2f}",
+                    str(len(transaction.items)),
+                    transaction.store_name or "",
+                )
 
         console.print(table)
 
@@ -251,6 +261,91 @@ def list_budgets():
         sys.exit(1)
     except Exception as e:
         console.print(f"❌ Failed to list budgets: {e}", style="bold red")
+        sys.exit(1)
+
+
+@main.command()
+@click.option(
+    "--confidence-threshold",
+    type=float,
+    default=0.8,
+    help="Minimum confidence score for automatic matching (0.0-1.0)",
+)
+@click.option(
+    "--date-tolerance",
+    type=int,
+    default=3,
+    help="Number of days +/- to search for matches",
+)
+@click.option(
+    "--amount-tolerance",
+    type=float,
+    default=0.05,
+    help="Percentage tolerance for amount matching (0.05 = 5%)",
+)
+@click.pass_context
+def match_transactions(
+    ctx: click.Context,
+    confidence_threshold: float,
+    date_tolerance: int,
+    amount_tolerance: float,
+) -> None:
+    """Match itemized transactions with YNAB transactions."""
+    from .database.manager import DatabaseManager
+    from .services.matching import TransactionMatcher
+
+    try:
+        with console.status("🔍 Matching transactions..."):
+            db_manager = DatabaseManager()
+
+            with db_manager.get_session() as session:
+                matcher = TransactionMatcher(session)
+
+                # Get unmatched itemized transactions
+                unmatched = matcher.get_unmatched_itemized_transactions()
+                console.print(f"Found {len(unmatched)} unmatched itemized transactions")
+
+                if not unmatched:
+                    console.print("✅ No unmatched transactions found!")
+                    return
+
+                # Auto-match high-confidence matches
+                auto_matches = matcher.auto_match_transactions(confidence_threshold)
+
+                if auto_matches:
+                    console.print(
+                        f"✅ Automatically matched {len(auto_matches)} transactions"
+                    )
+
+                # Show remaining unmatched transactions
+                remaining = matcher.get_unmatched_itemized_transactions()
+                if remaining:
+                    console.print(
+                        f"⚠️  {len(remaining)} transactions still need manual review"
+                    )
+
+                    # Show a few examples
+                    table = Table(title="Unmatched Itemized Transactions (Sample)")
+                    table.add_column("Date", style="cyan")
+                    table.add_column("Merchant", style="green")
+                    table.add_column("Amount", style="yellow")
+                    table.add_column("Source", style="blue")
+
+                    for tx in remaining[:5]:  # Show first 5
+                        table.add_row(
+                            str(tx.transaction_date),
+                            tx.merchant_name or "Unknown",
+                            f"${tx.total_amount:.2f}",
+                            tx.source,
+                        )
+
+                    console.print(table)
+
+                    if len(remaining) > 5:
+                        console.print(f"... and {len(remaining) - 5} more")
+
+    except Exception as e:
+        console.print(f"❌ Error matching transactions: {e}", style="bold red")
         sys.exit(1)
 
 

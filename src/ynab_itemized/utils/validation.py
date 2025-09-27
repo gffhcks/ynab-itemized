@@ -49,6 +49,10 @@ def validate_transaction_totals(
             )
 
     # Check against YNAB transaction amount
+    if not transaction.ynab_transaction:
+        errors.append("No YNAB transaction to validate against")
+        return False, errors
+
     ynab_amount = abs(
         transaction.ynab_transaction.amount / 1000
     )  # Convert from milliunits

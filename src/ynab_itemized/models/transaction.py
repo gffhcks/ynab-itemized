@@ -87,9 +87,34 @@ class YNABTransaction(BaseModel):
 class ItemizedTransaction(BaseModel):
     """Complete itemized transaction with YNAB data and item details."""
 
-    ynab_transaction: YNABTransaction = Field(..., description="YNAB transaction data")
+    ynab_transaction: Optional[YNABTransaction] = Field(
+        None, description="YNAB transaction data"
+    )
     items: List[TransactionItem] = Field(
         default_factory=list, description="Itemized breakdown"
+    )
+
+    # Required fields for matching
+    transaction_date: Optional[Date] = Field(
+        None, description="Transaction date for matching"
+    )
+    total_amount: Optional[Decimal] = Field(
+        None, description="Total transaction amount"
+    )
+    merchant_name: Optional[str] = Field(None, description="Merchant name for matching")
+
+    # Matching metadata
+    match_status: str = Field(default="unmatched", description="Match status")
+    match_confidence: Optional[float] = Field(
+        None, description="Match confidence score"
+    )
+    match_method: Optional[str] = Field(None, description="Method used for matching")
+    match_notes: Optional[str] = Field(None, description="Notes about the match")
+
+    # Source tracking
+    source: Optional[str] = Field(None, description="Source of the transaction")
+    source_transaction_id: Optional[str] = Field(
+        None, description="Original transaction ID from source"
     )
 
     # Summary fields
@@ -158,9 +183,44 @@ class ItemizedTransaction(BaseModel):
 
     def validate_totals(self) -> bool:
         """Validate that calculated totals match YNAB transaction amount."""
+        if not self.ynab_transaction:
+            # If no YNAB transaction, validate against total_amount if available
+            if self.total_amount:
+                calculated_total = self.calculated_total
+                return abs(self.total_amount - calculated_total) < Decimal("0.01")
+            return True  # Can't validate without reference amount
+
         # Convert YNAB milliunits to regular units
         ynab_amount = abs(self.ynab_transaction.amount / 1000)
         calculated_total = self.calculated_total
 
         # Allow for small rounding differences
         return abs(ynab_amount - calculated_total) < Decimal("0.01")
+
+    @field_validator("total_amount", mode="before")
+    @classmethod
+    def convert_total_amount_to_decimal(cls, v):
+        """Convert total_amount to Decimal."""
+        if v is None:
+            return v
+        return Decimal(str(v))
+
+    @field_validator("match_confidence", mode="before")
+    @classmethod
+    def validate_match_confidence(cls, v):
+        """Validate match confidence is between 0 and 1."""
+        if v is None:
+            return v
+        confidence = float(v)
+        if not 0.0 <= confidence <= 1.0:
+            raise ValueError("Match confidence must be between 0.0 and 1.0")
+        return confidence
+
+    @field_validator("match_status")
+    @classmethod
+    def validate_match_status(cls, v):
+        """Validate match status is one of the allowed values."""
+        allowed_statuses = {"unmatched", "matched", "manual_match", "no_match"}
+        if v not in allowed_statuses:
+            raise ValueError(f"Match status must be one of: {allowed_statuses}")
+        return v
