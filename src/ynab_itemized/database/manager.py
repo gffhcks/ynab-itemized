@@ -26,7 +26,7 @@ class DatabaseManager:
         """Initialize database manager."""
         if database_url is None:
             settings = get_settings()
-            database_url = settings.database_url
+            database_url = settings.get_database_url()
 
         self.engine = create_engine(database_url, echo=False)
         self.SessionLocal = sessionmaker(

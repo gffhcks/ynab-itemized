@@ -1,8 +1,20 @@
+# Makefile for YNAB Itemized Transaction Manager
+#
+# ⚠️  DEPRECATED: This Makefile is deprecated in favor of Nox for cross-platform support.
+# Please use 'nox --list' to see available tasks and 'nox -s <task>' to run them.
+# See MIGRATION.md for the migration guide.
+#
+# This Makefile will be removed in a future version.
+
 .PHONY: help install install-dev install-deps setup test test-cov lint format clean build docs
 
 # Default target
 help:
-	@echo "Available targets:"
+	@echo "⚠️  DEPRECATED: This Makefile is deprecated!"
+	@echo "Please use Nox instead: 'pip install nox && nox --list'"
+	@echo "See MIGRATION.md for the migration guide."
+	@echo ""
+	@echo "Available targets (deprecated):"
 	@echo "  setup        Complete setup (install system deps + package)"
 	@echo "  install-deps Install system dependencies (Ubuntu/Debian)"
 	@echo "  install      Install package in development mode"

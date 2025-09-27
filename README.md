@@ -16,38 +16,70 @@ A Python application for managing itemized transaction data with YNAB (You Need 
 
 ## Installation
 
-### Quick Setup (Ubuntu/Debian)
+### Quick Setup (Cross-Platform)
 
-For Ubuntu/Debian systems, you can use the automated setup:
+We provide automated setup scripts for all major platforms:
+
+#### Windows (PowerShell)
+```powershell
+git clone <repository-url>
+cd ynab-itemized
+.\scripts\setup-windows.ps1 -DevSetup
+```
+
+#### Linux/macOS (Bash)
+```bash
+git clone <repository-url>
+cd ynab-itemized
+./scripts/setup-unix.sh --dev-setup
+```
+
+#### Using Nox (Recommended for Development)
+If you already have Python and Git installed:
 
 ```bash
 git clone <repository-url>
 cd ynab-itemized
-make setup
+pip install nox
+nox -s dev_setup
 ```
-
-This will install all system dependencies and the Python package in one command.
 
 ### Manual Installation
 
-1. Clone the repository:
+1. **Prerequisites**
+   - Python 3.9 or higher
+   - Git
+   - pip
+
+2. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd ynab-itemized
 ```
 
-2. Install system dependencies (Ubuntu/Debian):
-```bash
-make install-deps
-```
+3. **Install system dependencies:**
 
-Or manually install the required packages:
-```bash
-sudo apt update
-sudo apt install -y python3-venv python3-pip python3-dev build-essential git
-```
+   **Ubuntu/Debian:**
+   ```bash
+   sudo apt update
+   sudo apt install -y python3-dev python3-venv python3-pip build-essential git
+   ```
 
-3. Install the Python package:
+   **RHEL/CentOS/Fedora:**
+   ```bash
+   sudo dnf install -y python3-devel python3-pip gcc gcc-c++ make git
+   ```
+
+   **macOS (with Homebrew):**
+   ```bash
+   brew install python git
+   ```
+
+   **Windows:**
+   - Install Python from [python.org](https://python.org)
+   - Install Git from [git-scm.com](https://git-scm.com)
+
+4. **Install the Python package:**
 ```bash
 make install
 ```
@@ -83,23 +115,32 @@ ynab-itemized init-db
 
 ## Development
 
-### Available Make Targets
+### Available Nox Sessions
 
-The project includes several make targets for common development tasks:
+The project uses [Nox](https://nox.thea.codes/) for cross-platform development tasks:
 
 ```bash
-make help          # Show all available targets
-make setup         # Complete setup (install system deps + package)
-make install-deps  # Install system dependencies (Ubuntu/Debian)
-make install       # Install package
-make install-dev   # Install package with development dependencies
-make build         # Build package
-make test          # Run tests
-make test-cov      # Run tests with coverage report
-make lint          # Run linting (flake8, mypy)
-make format        # Format code with black
-make clean         # Clean build artifacts
+nox --list         # Show all available sessions
+nox -s dev_setup   # Set up development environment
+nox -s tests       # Run tests
+nox -s lint        # Run linting (flake8)
+nox -s type_check  # Run type checking (mypy)
+nox -s format      # Format code with black and isort
+nox -s format_check # Check code formatting
+nox -s build       # Build package
+nox -s clean       # Clean build artifacts
+nox -s pre_commit  # Run all pre-commit checks
 ```
+
+### Cross-Platform Development
+
+Nox automatically handles:
+- Virtual environment creation
+- Cross-platform path handling
+- Python version management
+- Dependency installation
+
+This ensures consistent behavior across Windows, macOS, and Linux.
 
 ### YNAB API Setup
 
@@ -152,13 +193,16 @@ itemized = ItemizedTransaction(
 )
 ```
 
-## Development
+### Quick Development Setup
 
-### Setup Development Environment
+For a complete development environment setup:
 
 ```bash
+# Using nox (recommended)
+nox -s dev_setup
+
+# Or manually
 pip install -e ".[dev]"
-pre-commit install
 ```
 
 ### Running Tests

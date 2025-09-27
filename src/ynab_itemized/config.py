@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+from platformdirs import user_data_dir
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -27,7 +28,7 @@ class Settings(BaseSettings):
 
     # Database Configuration
     database_url: str = Field(
-        default="sqlite:///./ynab_itemized.db", description="Database URL"
+        default="", description="Database URL (auto-generated if empty)"
     )
 
     # Logging Configuration
@@ -43,8 +44,18 @@ class Settings(BaseSettings):
 
     # Data Directory
     data_dir: Path = Field(
-        default=Path.home() / ".ynab_itemized", description="Data Directory"
+        default_factory=lambda: Path(user_data_dir("ynab-itemized", "YNABItemized")),
+        description="Data Directory",
     )
+
+    def get_database_url(self) -> str:
+        """Get database URL, generating default if not set."""
+        if self.database_url:
+            return self.database_url
+
+        # Generate default database path in data directory
+        db_path = self.data_dir / "ynab_itemized.db"
+        return f"sqlite:///{db_path}"
 
 
 def get_settings() -> Settings:
