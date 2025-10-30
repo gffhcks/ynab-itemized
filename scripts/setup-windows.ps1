@@ -128,13 +128,38 @@ function Setup-Development {
         exit 1
     }
 
-    # Install nox
+    # Install uv
+    Write-Host "📦 Installing uv..." -ForegroundColor Yellow
+    if (-not (Test-Command "uv")) {
+        powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+        # Refresh PATH
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    }
+    else {
+        Write-Host "✅ uv already installed" -ForegroundColor Green
+    }
+
+    # Install nox with uv
     Write-Host "📦 Installing nox..." -ForegroundColor Yellow
-    python -m pip install --user nox
+    uv tool install nox
+
+    # Install pre-commit with uv
+    Write-Host "📦 Installing pre-commit..." -ForegroundColor Yellow
+    if (-not (Test-Command "pre-commit")) {
+        uv tool install pre-commit
+    }
+    else {
+        Write-Host "✅ pre-commit already installed" -ForegroundColor Green
+    }
 
     # Run development setup
     Write-Host "🔧 Running development setup..." -ForegroundColor Yellow
-    python -m nox -s dev_setup
+    nox -s dev_setup
+
+    # Install pre-commit hooks
+    Write-Host "🪝 Installing pre-commit hooks..." -ForegroundColor Yellow
+    pre-commit install
 
     Write-Host ""
     Write-Host "✅ Development environment setup complete!" -ForegroundColor Green
@@ -143,10 +168,10 @@ function Setup-Development {
     Write-Host "  1. Set your YNAB API token: set YNAB_API_TOKEN=your_token_here"
     Write-Host "  2. Initialize database: nox -s init_db"
     Write-Host "  3. Run tests: nox -s tests"
-    Write-Host "  4. Format code: nox -s format"
+    Write-Host "  4. Run pre-commit: pre-commit run --all-files"
     Write-Host ""
     Write-Host "Available nox sessions:" -ForegroundColor Yellow
-    python -m nox --list
+    nox --list
 }
 
 # Main script logic

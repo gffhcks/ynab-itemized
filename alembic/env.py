@@ -33,7 +33,7 @@ def get_database_url():
     """Get database URL from settings."""
     try:
         settings = get_settings()
-        return settings.database_url
+        return settings.get_database_url()
     except Exception:
         # Fallback to default if settings can't be loaded
         return "sqlite:///./ynab_itemized.db"

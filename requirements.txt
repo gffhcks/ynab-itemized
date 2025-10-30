@@ -1,14 +1,33 @@
+# YNAB Itemized - Requirements File
+#
+# This project uses UV for package management.
+# For locked dependencies, see:
+#   - requirements.lock (production dependencies)
+#   - requirements-dev.lock (development dependencies)
+#
+# To install with UV:
+#   uv pip install -r requirements.lock
+#   uv pip install -r requirements-dev.lock  # for development
+#
+# To regenerate lock files:
+#   uv pip compile pyproject.toml -o requirements.lock
+#   uv pip compile pyproject.toml --extra dev -o requirements-dev.lock
+#
+# For traditional pip installation (not recommended):
+#   pip install -e .
+#   pip install -e ".[dev]"  # for development
+
 # YNAB API Integration
 requests>=2.31.0
-pynab>=1.0.0
+pynab>=0.6.8
 
 # Database and Data Storage
 sqlalchemy>=2.0.0
 alembic>=1.12.0
-sqlite3  # Built-in, but listed for clarity
 
 # Data Processing and Validation
 pydantic>=2.0.0
+pydantic-settings>=2.0.0
 pandas>=2.0.0
 numpy>=1.24.0
 
@@ -24,17 +43,5 @@ rich>=13.0.0
 # Date/Time Handling
 python-dateutil>=2.8.0
 
-# Testing
-pytest>=7.4.0
-pytest-cov>=4.1.0
-pytest-mock>=3.11.0
-
-# Development Tools
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.5.0
-pre-commit>=3.4.0
-
-# Optional: Web interface (if needed later)
-# fastapi>=0.100.0
-# uvicorn>=0.23.0
+# Platform Utilities
+platformdirs>=3.0.0

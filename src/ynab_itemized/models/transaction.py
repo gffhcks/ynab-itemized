@@ -62,6 +62,35 @@ class TransactionItem(BaseModel):
         return self
 
 
+class YNABSubtransaction(BaseModel):
+    """YNAB subtransaction data (for split transactions)."""
+
+    subtransaction_id: Optional[str] = Field(
+        None, description="Subtransaction ID (null for new subtransactions)"
+    )
+    amount: Decimal = Field(..., description="Amount in milliunits")
+    memo: Optional[str] = Field(None, description="Subtransaction memo")
+    payee_id: Optional[str] = Field(None, description="Payee ID")
+    payee_name: Optional[str] = Field(None, description="Payee name")
+    category_id: Optional[str] = Field(None, description="Category ID")
+    category_name: Optional[str] = Field(None, description="Category name")
+    transfer_account_id: Optional[str] = Field(
+        None, description="Transfer account ID (if this is a transfer)"
+    )
+    transfer_transaction_id: Optional[str] = Field(
+        None, description="Transfer transaction ID (if this is a transfer)"
+    )
+    deleted: bool = Field(
+        default=False, description="Whether subtransaction is deleted"
+    )
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def convert_amount_to_decimal(cls, v):
+        """Convert amount to Decimal."""
+        return Decimal(str(v))
+
+
 class YNABTransaction(BaseModel):
     """YNAB transaction data."""
 
@@ -76,12 +105,47 @@ class YNABTransaction(BaseModel):
     approved: bool = Field(default=True)
     flag_color: Optional[str] = Field(None, description="Flag color")
     import_id: Optional[str] = Field(None, description="Import ID")
+    subtransactions: List["YNABSubtransaction"] = Field(
+        default_factory=list,
+        description="Subtransactions (for split transactions)",
+    )
 
     @field_validator("amount", mode="before")
     @classmethod
     def convert_amount_to_decimal(cls, v):
         """Convert amount to Decimal."""
         return Decimal(str(v))
+
+    @property
+    def has_subtransactions(self) -> bool:
+        """Check if transaction has subtransactions."""
+        return len(self.subtransactions) > 0
+
+    def validate_subtransaction_amounts(self) -> bool:
+        """
+        Validate that subtransaction amounts sum to transaction amount.
+
+        Returns:
+            True if valid, False otherwise
+        """
+        if not self.has_subtransactions:
+            return True
+
+        subtotal = sum(st.amount for st in self.subtransactions)
+        return subtotal == self.amount
+
+    def dict_for_db(self) -> Dict[str, Any]:
+        """
+        Return dictionary suitable for database storage.
+
+        Excludes subtransactions field since they are stored separately.
+        """
+        data = super().dict_for_db()
+        # Remove subtransactions - they're not stored in YNABTransactionDB
+        data.pop("subtransactions", None)
+        # Set has_subtransactions flag
+        data["has_subtransactions"] = self.has_subtransactions
+        return data
 
 
 class ItemizedTransaction(BaseModel):

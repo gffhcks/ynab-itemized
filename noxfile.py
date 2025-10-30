@@ -14,6 +14,9 @@ nox.options.sessions = ["tests", "lint", "type_check"]
 # Reuse existing virtualenvs to speed up development
 nox.options.reuse_existing_virtualenvs = True
 
+# Use uv for faster package installation
+nox.options.default_venv_backend = "uv"
+
 
 @nox.session(python=PYTHON_VERSIONS)
 def tests(session):
@@ -92,14 +95,7 @@ def install_deps(session):
         "pytest",
         "pytest-cov",
         "pytest-mock",
-        "flake8",
-        "mypy",
-        "black",
-        "isort",
         "build",
-        "types-requests",
-        "types-sqlalchemy",
-        "types-pyyaml",
     )
 
 
@@ -126,25 +122,18 @@ def dev_setup(session):
     # Install the package in development mode
     session.install("-e", ".")
 
-    # Install development dependencies
+    # Install development dependencies (linters are handled by pre-commit)
     session.install(
         "pytest",
         "pytest-cov",
         "pytest-mock",
-        "flake8",
-        "mypy",
-        "black",
-        "isort",
         "build",
-        "types-requests",
-        "types-sqlalchemy",
-        "types-pyyaml",
     )
 
     session.log("✅ Development environment ready!")
     session.log("💡 Run 'nox -s tests' to run tests")
-    session.log("💡 Run 'nox -s lint' to check code style")
-    session.log("💡 Run 'nox -s format' to format code")
+    session.log("💡 Run 'pre-commit run --all-files' to run all linters")
+    session.log("💡 Linters (black, isort, flake8, mypy) are managed by pre-commit")
 
 
 @nox.session
@@ -152,22 +141,15 @@ def pre_commit(session):
     """Run all pre-commit checks."""
     session.log("🔍 Running pre-commit checks...")
 
-    # Format check
-    session.install("black", "isort")
-    session.run("black", "--check", "src/", "tests/")
-    session.run("isort", "--check-only", "src/", "tests/")
+    # Install pre-commit
+    session.install("pre-commit")
 
-    # Linting
-    session.install("flake8")
-    session.run("flake8", "src/", "tests/")
-
-    # Type checking
-    session.install("mypy", "types-requests", "types-sqlalchemy", "types-pyyaml")
-    session.install("-e", ".")
-    session.run("mypy", "src/")
+    # Run pre-commit on all files
+    session.run("pre-commit", "run", "--all-files")
 
     # Tests
     session.install("pytest", "pytest-cov", "pytest-mock")
+    session.install("-e", ".")
     session.run("pytest", "--cov=ynab_itemized")
 
     session.log("✅ All pre-commit checks passed!")
@@ -251,19 +233,11 @@ def release_check(session):
     session.log("🚀 Checking release readiness...")
 
     # Run all quality checks
-    session.install("black", "isort", "flake8", "mypy", "pytest", "pytest-cov", "build")
-    session.install("types-requests", "types-sqlalchemy", "types-pyyaml")
+    session.install("pre-commit", "pytest", "pytest-cov", "build")
     session.install("-e", ".")
 
-    # Format check
-    session.run("black", "--check", "src/", "tests/")
-    session.run("isort", "--check-only", "src/", "tests/")
-
-    # Linting
-    session.run("flake8", "src/", "tests/")
-
-    # Type checking
-    session.run("mypy", "src/")
+    # Run pre-commit checks
+    session.run("pre-commit", "run", "--all-files")
 
     # Tests with coverage
     session.run("pytest", "--cov=ynab_itemized", "--cov-fail-under=80")

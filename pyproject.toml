@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "ynab-itemized"
@@ -62,14 +62,11 @@ web = [
 [project.scripts]
 ynab-itemized = "ynab_itemized.cli:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/ynab_itemized"]
 
-[tool.setuptools.package-dir]
-"" = "src"
-
-[tool.setuptools.dynamic]
-version = {attr = "ynab_itemized.__version__"}
+[tool.hatch.version]
+path = "src/ynab_itemized/__init__.py"
 
 [tool.black]
 line-length = 88

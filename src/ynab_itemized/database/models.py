@@ -37,6 +37,7 @@ class YNABTransactionDB(Base):  # type: ignore[valid-type,misc]
     approved = Column(Boolean, nullable=False, default=True)
     flag_color = Column(String, nullable=True)
     import_id = Column(String, nullable=True)
+    has_subtransactions = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
 
@@ -101,6 +102,11 @@ class ItemizedTransactionDB(Base):  # type: ignore[valid-type,misc]
     tags = Column(JSON, nullable=True)  # Store as JSON array
     extra_metadata = Column(JSON, nullable=True)  # Store as JSON object
 
+    # Subtransaction sync tracking
+    subtransactions_synced_at = Column(
+        DateTime, nullable=True
+    )  # Last time subtransactions were synced to YNAB
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
 
@@ -122,6 +128,14 @@ class TransactionItemDB(Base):  # type: ignore[valid-type,misc]
     transaction_id = Column(
         String, ForeignKey("itemized_transactions.id"), nullable=False
     )
+
+    # YNAB subtransaction mapping
+    ynab_subtransaction_id = Column(
+        String, nullable=True, index=True
+    )  # Maps to YNAB subtransaction ID
+    ynab_category_id = Column(
+        String, nullable=True
+    )  # YNAB category ID from subtransaction
 
     name = Column(String, nullable=False)
     amount = Column(Numeric(precision=10, scale=2), nullable=False)

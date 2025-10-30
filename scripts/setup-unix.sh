@@ -168,27 +168,54 @@ setup_development() {
         exit 1
     fi
 
-    # Install nox
+    # Install uv
+    echo -e "${YELLOW}📦 Installing uv...${NC}"
+    if ! command_exists uv; then
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+        # Add cargo bin to PATH for current session
+        export PATH="$HOME/.cargo/bin:$PATH"
+    else
+        echo -e "${GREEN}✅ uv already installed${NC}"
+    fi
+
+    # Install nox with uv
     echo -e "${YELLOW}📦 Installing nox...${NC}"
-    python3 -m pip install --user nox
+    uv tool install nox
+
+    # Install pre-commit with uv
+    echo -e "${YELLOW}📦 Installing pre-commit...${NC}"
+    if ! command_exists pre-commit; then
+        uv tool install pre-commit
+    else
+        echo -e "${GREEN}✅ pre-commit already installed${NC}"
+    fi
 
     # Add user bin to PATH if not already there
     USER_BIN="$HOME/.local/bin"
-    if [[ ":$PATH:" != *":$USER_BIN:"* ]]; then
-        echo -e "${YELLOW}Adding $USER_BIN to PATH...${NC}"
-        export PATH="$USER_BIN:$PATH"
+    CARGO_BIN="$HOME/.cargo/bin"
+
+    if [[ ":$PATH:" != *":$USER_BIN:"* ]] || [[ ":$PATH:" != *":$CARGO_BIN:"* ]]; then
+        echo -e "${YELLOW}Adding bins to PATH...${NC}"
+        export PATH="$CARGO_BIN:$USER_BIN:$PATH"
 
         # Add to shell profile
         if [[ -f "$HOME/.bashrc" ]]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+            grep -qxF 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"' "$HOME/.bashrc" || \
+                echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
         elif [[ -f "$HOME/.zshrc" ]]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+            grep -qxF 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"' "$HOME/.zshrc" || \
+                echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
         fi
     fi
 
     # Run development setup
     echo -e "${YELLOW}🔧 Running development setup...${NC}"
-    python3 -m nox -s dev_setup
+    nox -s dev_setup
+
+    # Install pre-commit hooks
+    echo -e "${YELLOW}🪝 Installing pre-commit hooks...${NC}"
+    pre-commit install
 
     echo ""
     echo -e "${GREEN}✅ Development environment setup complete!${NC}"
@@ -197,10 +224,10 @@ setup_development() {
     echo "  1. Set your YNAB API token: export YNAB_API_TOKEN=your_token_here"
     echo "  2. Initialize database: nox -s init_db"
     echo "  3. Run tests: nox -s tests"
-    echo "  4. Format code: nox -s format"
+    echo "  4. Run pre-commit: pre-commit run --all-files"
     echo ""
     echo -e "${YELLOW}Available nox sessions:${NC}"
-    python3 -m nox --list
+    nox --list
 }
 
 # Main script logic

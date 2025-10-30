@@ -18,7 +18,7 @@ A Python application for managing itemized transaction data with YNAB (You Need 
 
 ### Quick Setup (Cross-Platform)
 
-We provide automated setup scripts for all major platforms:
+This project uses [UV](https://docs.astral.sh/uv/) for fast, reliable Python package and project management. We provide automated setup scripts for all major platforms:
 
 #### Windows (PowerShell)
 ```powershell
@@ -34,13 +34,15 @@ cd ynab-itemized
 ./scripts/setup-unix.sh --dev-setup
 ```
 
-#### Using Nox (Recommended for Development)
-If you already have Python and Git installed:
+The setup scripts will automatically install UV and Nox, then set up your development environment.
+
+#### Manual Setup with UV
+If you already have UV installed:
 
 ```bash
 git clone <repository-url>
 cd ynab-itemized
-pip install nox
+uv tool install nox
 nox -s dev_setup
 ```
 
@@ -84,20 +86,22 @@ cd ynab-itemized
 make install
 ```
 
-### Alternative: Virtual Environment Setup
+### Alternative: Direct Installation with UV
 
-If you prefer to use a virtual environment:
+If you prefer to manage the environment directly with UV:
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-Then install dependencies:
-```bash
-pip install -e ".[dev]"  # For development
+# Install UV if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Unix/macOS
 # or
-pip install .  # For regular use
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+
+# Create a virtual environment and install the package
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e ".[dev]"  # For development
+# or
+uv pip install .  # For regular use
 ```
 
 ## Configuration
@@ -115,32 +119,57 @@ ynab-itemized init-db
 
 ## Development
 
+### Package Management with UV
+
+This project uses [UV](https://docs.astral.sh/uv/) for fast, reliable package management. UV provides:
+- **10-100x faster** package installation than pip
+- **Reliable dependency resolution** with a built-in resolver
+- **Drop-in replacement** for pip, pip-tools, and virtualenv
+- **Cross-platform** support for Windows, macOS, and Linux
+
+### Code Quality with Pre-commit
+
+This project uses [pre-commit](https://pre-commit.com/) to automatically run linters and formatters before each commit:
+- **black** - Code formatting
+- **isort** - Import sorting
+- **flake8** - Linting and style checking
+- **mypy** - Static type checking
+- **Standard hooks** - Trailing whitespace, end-of-file fixes, YAML validation, etc.
+
+Pre-commit is automatically installed and configured by the setup scripts. To run manually:
+```bash
+pre-commit run --all-files  # Run all hooks on all files
+pre-commit run              # Run hooks on staged files only
+```
+
 ### Available Nox Sessions
 
-The project uses [Nox](https://nox.thea.codes/) for cross-platform development tasks:
+The project uses [Nox](https://nox.thea.codes/) with UV backend for cross-platform development tasks:
 
 ```bash
 nox --list         # Show all available sessions
 nox -s dev_setup   # Set up development environment
 nox -s tests       # Run tests
-nox -s lint        # Run linting (flake8)
-nox -s type_check  # Run type checking (mypy)
-nox -s format      # Format code with black and isort
-nox -s format_check # Check code formatting
+nox -s lint        # Run linting (flake8) - for CI/testing
+nox -s type_check  # Run type checking (mypy) - for CI/testing
+nox -s format      # Format code with black and isort - for CI/testing
+nox -s format_check # Check code formatting - for CI/testing
 nox -s build       # Build package
 nox -s clean       # Clean build artifacts
-nox -s pre_commit  # Run all pre-commit checks
+nox -s pre_commit  # Run all pre-commit checks + tests
 ```
+
+**Note**: For local development, use `pre-commit run --all-files` instead of individual nox linting sessions. The nox linting sessions are kept for CI/CD pipelines and testing purposes.
 
 ### Cross-Platform Development
 
-Nox automatically handles:
-- Virtual environment creation
+Nox with UV backend automatically handles:
+- Fast virtual environment creation with UV
 - Cross-platform path handling
 - Python version management
-- Dependency installation
+- Rapid dependency installation
 
-This ensures consistent behavior across Windows, macOS, and Linux.
+This ensures consistent behavior across Windows, macOS, and Linux with significantly improved performance.
 
 ### YNAB API Setup
 
@@ -198,11 +227,11 @@ itemized = ItemizedTransaction(
 For a complete development environment setup:
 
 ```bash
-# Using nox (recommended)
+# Using nox with UV (recommended)
 nox -s dev_setup
 
-# Or manually
-pip install -e ".[dev]"
+# Or manually with UV
+uv pip install -e ".[dev]"
 ```
 
 ### Running Tests

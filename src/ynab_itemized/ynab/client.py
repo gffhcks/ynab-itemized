@@ -10,7 +10,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from ..config import get_settings
-from ..models.transaction import TransactionStatus, YNABTransaction
+from ..models.transaction import (
+    TransactionStatus,
+    YNABSubtransaction,
+    YNABTransaction,
+)
 from .exceptions import (
     YNABAPIError,
     YNABAuthError,
@@ -125,6 +129,41 @@ class YNABClient:
         response = self._make_request("GET", f"/budgets/{self.budget_id}/categories")
         return response["data"]["category_groups"]
 
+    def _parse_subtransactions(
+        self, subtransactions_data: List[Dict[str, Any]]
+    ) -> List[YNABSubtransaction]:
+        """
+        Parse subtransactions from YNAB API response.
+
+        Args:
+            subtransactions_data: List of subtransaction dictionaries from API
+
+        Returns:
+            List of YNABSubtransaction objects
+        """
+        subtransactions = []
+        for st in subtransactions_data:
+            try:
+                subtransaction = YNABSubtransaction(
+                    subtransaction_id=st.get("id"),
+                    amount=st["amount"],
+                    memo=st.get("memo"),
+                    payee_id=st.get("payee_id"),
+                    payee_name=st.get("payee_name"),
+                    category_id=st.get("category_id"),
+                    category_name=st.get("category_name"),
+                    transfer_account_id=st.get("transfer_account_id"),
+                    transfer_transaction_id=st.get("transfer_transaction_id"),
+                    deleted=st.get("deleted", False),
+                )
+                subtransactions.append(subtransaction)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to parse subtransaction {st.get('id', 'unknown')}: {e}"
+                )
+                continue
+        return subtransactions
+
     def get_transactions(
         self, account_id: str = None, since_date: date = None, type_filter: str = None
     ) -> List[YNABTransaction]:
@@ -148,6 +187,11 @@ class YNABClient:
         ynab_transactions = []
         for t in transactions:
             try:
+                # Parse subtransactions if present
+                subtransactions = []
+                if "subtransactions" in t and t["subtransactions"]:
+                    subtransactions = self._parse_subtransactions(t["subtransactions"])
+
                 transaction = YNABTransaction(
                     ynab_id=t["id"],
                     account_id=t["account_id"],
@@ -160,6 +204,7 @@ class YNABClient:
                     approved=t["approved"],
                     flag_color=t.get("flag_color"),
                     import_id=t.get("import_id"),
+                    subtransactions=subtransactions,
                 )
                 ynab_transactions.append(transaction)
             except Exception as e:
@@ -178,6 +223,11 @@ class YNABClient:
             )
             t = response["data"]["transaction"]
 
+            # Parse subtransactions if present
+            subtransactions = []
+            if "subtransactions" in t and t["subtransactions"]:
+                subtransactions = self._parse_subtransactions(t["subtransactions"])
+
             return YNABTransaction(
                 ynab_id=t["id"],
                 account_id=t["account_id"],
@@ -190,6 +240,7 @@ class YNABClient:
                 approved=t["approved"],
                 flag_color=t.get("flag_color"),
                 import_id=t.get("import_id"),
+                subtransactions=subtransactions,
             )
         except YNABNotFoundError:
             return None
@@ -218,6 +269,12 @@ class YNABClient:
         )
 
         t = response["data"]["transaction"]
+
+        # Parse subtransactions if present
+        subtransactions = []
+        if "subtransactions" in t and t["subtransactions"]:
+            subtransactions = self._parse_subtransactions(t["subtransactions"])
+
         return YNABTransaction(
             ynab_id=t["id"],
             account_id=t["account_id"],
@@ -230,4 +287,102 @@ class YNABClient:
             approved=t["approved"],
             flag_color=t.get("flag_color"),
             import_id=t.get("import_id"),
+            subtransactions=subtransactions,
+        )
+
+    def update_transaction_with_subtransactions(
+        self, transaction: YNABTransaction
+    ) -> YNABTransaction:
+        """
+        Update a transaction in YNAB with subtransactions.
+
+        This method updates a transaction and creates/updates its subtransactions.
+        When a transaction has subtransactions, the parent transaction's category
+        should be null, and the subtransaction amounts must sum to the parent amount.
+
+        Args:
+            transaction: YNABTransaction with subtransactions
+
+        Returns:
+            Updated YNABTransaction from YNAB
+
+        Raises:
+            YNABValidationError: If subtransaction amounts don't sum to parent amount
+        """
+        # Validate subtransaction amounts
+        if transaction.has_subtransactions:
+            if not transaction.validate_subtransaction_amounts():
+                raise YNABValidationError(
+                    "Subtransaction amounts must sum to transaction amount"
+                )
+
+        # Prepare transaction data
+        transaction_data = {
+            "account_id": transaction.account_id,
+            "payee_name": transaction.payee_name,
+            "memo": transaction.memo,
+            "amount": int(transaction.amount),
+            "date": transaction.date.isoformat(),
+            "cleared": transaction.cleared.value,
+            "approved": transaction.approved,
+            "flag_color": transaction.flag_color,
+        }
+
+        # When transaction has subtransactions, category_id should be null
+        if transaction.has_subtransactions:
+            transaction_data["category_id"] = None
+
+            # Prepare subtransactions data
+            subtransactions_data = []
+            for st in transaction.subtransactions:
+                st_data = {
+                    "amount": int(st.amount),
+                    "memo": st.memo,
+                    "payee_id": st.payee_id,
+                    "payee_name": st.payee_name,
+                    "category_id": st.category_id,
+                }
+
+                # Include subtransaction_id if updating existing subtransaction
+                if st.subtransaction_id:
+                    st_data["id"] = st.subtransaction_id
+
+                # Remove None values
+                st_data = {k: v for k, v in st_data.items() if v is not None}
+                subtransactions_data.append(st_data)
+
+            transaction_data["subtransactions"] = subtransactions_data
+        else:
+            transaction_data["category_id"] = transaction.category_id
+
+        # Remove None values from transaction data
+        transaction_data = {k: v for k, v in transaction_data.items() if v is not None}
+
+        # Make API request
+        response = self._make_request(
+            "PUT",
+            f"/budgets/{self.budget_id}/transactions/{transaction.ynab_id}",
+            json={"transaction": transaction_data},
+        )
+
+        t = response["data"]["transaction"]
+
+        # Parse subtransactions if present
+        subtransactions = []
+        if "subtransactions" in t and t["subtransactions"]:
+            subtransactions = self._parse_subtransactions(t["subtransactions"])
+
+        return YNABTransaction(
+            ynab_id=t["id"],
+            account_id=t["account_id"],
+            category_id=t["category_id"],
+            payee_name=t.get("payee_name"),
+            memo=t.get("memo"),
+            amount=t["amount"],
+            date=datetime.fromisoformat(t["date"]).date(),
+            cleared=TransactionStatus(t["cleared"]),
+            approved=t["approved"],
+            flag_color=t.get("flag_color"),
+            import_id=t.get("import_id"),
+            subtransactions=subtransactions,
         )
